@@ -1,0 +1,62 @@
+PMB STIPI FINAL STABIL - RESMI
+
+Paket ini merapikan semua kebutuhan final:
+
+1. Peserta tidak bisa reset sendiri.
+2. Admin bisa reset peserta tertentu.
+3. Nama peserta/admin tampil jelas.
+4. Kamera bisa digeser dan minimize.
+5. Snapshot berkala aktif.
+6. Refresh tidak kembali ke awal:
+   - Admin tetap di dashboard.
+   - Peserta tetap login.
+   - Saat ujian, draft dan timer tetap lanjut.
+7. Dashboard admin menampilkan:
+   - monitor realtime,
+   - hasil nilai peserta dari Firebase,
+   - export CSV.
+8. Bagian hasil lokal admin diturunkan ke detail opsional agar tidak membingungkan.
+9. Tampilan lebih ringan dan aman di HP/laptop.
+
+FILE YANG DIUPLOAD:
+- app.js
+- index.html
+- styles.css
+- realtime-monitor.js
+
+JANGAN GANTI config.js karena Firebase kamu sudah aktif.
+
+LANGKAH PASANG:
+1. Extract ZIP.
+2. Upload 4 file di atas ke GitHub.
+3. Commit changes.
+4. Buka web.
+5. Tekan Ctrl + F5.
+
+HAL PENTING DI config.js:
+Pastikan bagian ini ada dan aktif:
+
+requireCameraBeforeExam: true,
+showCameraMonitor: true,
+enableSnapshots: true,
+snapshotIntervalSeconds: 90,
+snapshotWidth: 144,
+snapshotHeight: 108,
+snapshotQuality: 0.28
+
+Kalau mau ujian tanpa kamera, ubah:
+requireCameraBeforeExam: false,
+showCameraMonitor: false,
+enableSnapshots: false
+
+RESET PESERTA:
+Admin login > Reset Peserta > isi username.
+Peserta tidak punya tombol reset.
+
+HASIL NILAI:
+Gunakan panel "Hasil Ujian Peserta".
+Abaikan bagian "Rekap lokal browser admin" kecuali untuk cadangan.
+
+CATATAN:
+Karena website ini static GitHub Pages, keamanan admin/password tetap terbatas.
+Untuk ujian resmi, ganti password admin default di database/users.js.
