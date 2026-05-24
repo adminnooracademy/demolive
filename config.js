@@ -17,11 +17,11 @@ window.PMB_CONFIG = {
   useAnonymousAuth: true,
   heartbeatSeconds: 5,
   activeTimeoutSeconds: 20,
-  requireCameraBeforeExam: true
+  requireCameraBeforeExam: true,
   showCameraMonitor: true,
- enableSnapshots: true,
- snapshotIntervalSeconds: 90,
- snapshotWidth: 144,
- snapshotHeight: 108,
- snapshotQuality: 0.28
+  enableSnapshots: true,
+  snapshotIntervalSeconds: 90,
+  snapshotWidth: 144,
+  snapshotHeight: 108,
+  snapshotQuality: 0.28
 };
