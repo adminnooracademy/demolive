@@ -1,0 +1,16 @@
+{
+  "rules": {
+    "pmbRooms": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "participants": {
+          ".indexOn": ["username", "status", "lastSeenMs", "cameraOn"]
+        },
+        "results": {
+          ".indexOn": ["username", "submittedAt", "examKey", "score"]
+        }
+      }
+    }
+  }
+}

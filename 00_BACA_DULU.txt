@@ -1,0 +1,87 @@
+PMB STIPI MAGHFIRAH 2026 - ON-CAM + REALTIME ADMIN
+
+Ini paket baru berdasarkan file yang kamu kirim:
+- desain STIPI tetap dipakai,
+- logo dan banner yang kamu kirim tetap dipakai,
+- bank soal di app.js tetap dipakai,
+- akun di database/users.js tetap dipakai,
+- ditambahkan realtime-monitor.js untuk on-camera dan dashboard realtime admin.
+
+AKUN DEFAULT
+Admin:
+username: admin
+password: ipimadmin2026
+
+Peserta demo:
+username: pmbdemo
+password: pmb2026
+
+Peserta:
+username: pmb001 sampai pmb500
+password: ipim2026
+
+FITUR BARU
+1. Kamera wajib aktif sebelum peserta mulai ujian.
+2. Preview kamera tampil di pojok kanan bawah.
+3. Admin bisa pantau:
+   - jumlah peserta aktif,
+   - jumlah peserta on-camera,
+   - jumlah peserta sedang ujian,
+   - jumlah peserta selesai,
+   - peserta yang kamera off saat ujian,
+   - progress jawaban,
+   - sisa waktu,
+   - jumlah keluar tab/lost focus.
+4. Hasil submit juga dikirim ke Firebase.
+5. Admin bisa export status realtime dan hasil realtime ke CSV.
+
+CARA UPLOAD
+1. Extract ZIP.
+2. Upload semua isi folder ke GitHub repository.
+3. Pastikan index.html ada di root repo.
+4. Commit changes.
+5. Buka GitHub Pages.
+
+PENTING
+Web bisa tampil tanpa Firebase.
+Namun fitur realtime admin baru aktif setelah config Firebase diisi.
+
+CARA SETUP FIREBASE
+1. Buka Firebase Console.
+2. Create project.
+3. Add app > Web.
+4. Copy firebaseConfig.
+5. Buka config.js.
+6. Tempel firebaseConfig ke bagian firebaseConfig.
+7. Buka Authentication > Sign-in method.
+8. Aktifkan Anonymous.
+9. Buka Realtime Database.
+10. Create Database.
+11. Buka Realtime Database > Rules.
+12. Paste isi firebase.rules.json.
+13. Klik Publish.
+14. Upload ulang config.js ke GitHub.
+
+TESTING
+1. Buka web dari browser A sebagai admin.
+2. Login:
+   username: admin
+   password: ipimadmin2026
+
+3. Buka web dari browser B/HP sebagai peserta:
+   username: pmbdemo
+   password: pmb2026
+
+4. Peserta pilih paket, mulai ujian, izinkan kamera.
+5. Di admin harus muncul:
+   - peserta aktif,
+   - kamera on,
+   - sedang ujian,
+   - progress jawaban,
+   - sisa waktu.
+
+CATATAN KEJUJURAN
+Ini bukan live video monitoring.
+Admin tidak melihat video kamera peserta.
+Admin melihat status kamera aktif/off dan aktivitas ujian.
+Untuk melihat video semua peserta secara live, perlu WebRTC/backend yang lebih berat.

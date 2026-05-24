@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Ujian PMB STIPI Maghfirah 2026</title>
+  <link rel="preload" as="image" href="assets/logo-stipi-maghfirah.png">
+  <link rel="preload" as="image" href="assets/banner-ujian-tulis-2026.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="loginScreen" class="app-shell">
+    <section class="login-card" aria-label="Login Portal Ujian PMB STIPI Maghfirah">
+      <aside class="hero">
+        <div>
+          <div class="hero-brand">
+            <div class="hero-logo-frame"><img src="assets/logo-stipi-maghfirah.png" alt="STIPI Maghfirah"></div>
+            <div class="hero-brand-text">Portal Seleksi Mahasiswa Baru</div>
+          </div>
+          <div style="margin-top:34px">
+            <span class="badge">Sistem Ujian PMB</span>
+            <h1>Ujian Tulis STIPI Maghfirah 2026</h1>
+            <p>Portal resmi ujian tulis penerimaan mahasiswa baru STIPI Maghfirah tahun 2026.</p>
+          </div>
+        </div>
+        <div>
+          <div class="hero-grid">
+            <div class="hero-stat"><b id="statEnglish">50</b><span>Soal Inggris</span></div>
+            <div class="hero-stat"><b id="statArabic">50</b><span>Soal Arab</span></div>
+            <div class="hero-stat"><b id="statMath">50</b><span>Soal Matematika</span></div>
+          </div>
+          <div class="hero-banner"><img src="assets/banner-kampus-pemimpin.png" alt="Kampus Pemimpin Masa Depan"></div>
+        </div>
+      </aside>
+      <section class="login-side">
+        <div class="logo-row">
+          <div class="logo-mark"><img src="assets/logo-stipi-maghfirah.png" alt="Logo STIPI Maghfirah"></div>
+          <div><h2>STIPI Maghfirah</h2><small>Portal Ujian PMB 2026</small></div>
+        </div>
+        <h2 class="login-title">Masuk ke Sistem Ujian</h2>
+        <p class="login-subtitle">Gunakan username dan password yang diberikan oleh panitia. Pastikan identitas akun sesuai sebelum memulai ujian.</p>
+        <form id="loginForm">
+          <label for="username">Username</label>
+          <input id="username" class="input" autocomplete="username" placeholder="Masukkan username" required>
+          <label for="password">Password</label>
+          <input id="password" class="input" type="password" autocomplete="current-password" placeholder="Masukkan password" required>
+          <button class="btn btn-primary full" type="submit">Masuk ke Ujian</button>
+          <div id="loginError" class="error" role="alert"></div>
+        </form>
+        <div class="hint info-list"><b>Informasi Ujian:</b>
+          <ol>
+            <li>Berdoalah sebelum mengerjakan ujian.</li>
+            <li>Tuliskan username dan password dengan benar.</li>
+            <li>Bacalah setiap soal dengan teliti sebelum menjawab.</li>
+            <li>Kerjakan soal secara mandiri dan jujur.</li>
+            <li>Dilarang bekerja sama atau menggunakan AI.</li>
+          </ol>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <section id="app" class="hidden">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="logo-row" style="margin:0">
+          <div class="logo-mark"><img src="assets/logo-stipi-maghfirah.png" alt="Logo STIPI Maghfirah"></div>
+          <div><h2>STIPI Maghfirah</h2><small id="topSubtitle">Portal Ujian</small></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="user-pill"><div class="avatar" id="userInitial">P</div><div><b id="userName">Peserta</b><small id="userRole" style="display:block;color:var(--muted)">candidate</small></div></div>
+          <button id="logoutBtn" class="btn btn-ghost">Logout</button>
+        </div>
+      </div>
+    </header>
+    <main id="dashboard" class="main"></main>
+  </section>
+
+  <section id="examScreen" class="hidden"></section>
+
+  <script src="config.js"></script>
+  <script src="database/users.js"></script>
+
+  <!-- Firebase untuk realtime admin monitor -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+
+  <script src="app.js"></script>
+  <script src="realtime-monitor.js"></script>
+</body>
+</html>
