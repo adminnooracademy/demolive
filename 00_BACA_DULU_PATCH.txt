@@ -1,0 +1,54 @@
+PMB STIPI - PATCH SNAPSHOT + REFRESH + MOBILE STABLE
+
+Upload 4 file ini ke GitHub:
+1. index.html
+2. styles.css
+3. app.js
+4. realtime-monitor.js
+
+PENTING:
+JANGAN upload/ganti config.js dari ZIP ini, karena config Firebase kamu sudah aktif.
+ZIP ini memang tidak menyertakan config.js agar Firebase kamu tidak ketimpa.
+
+SETELAH UPLOAD:
+1. Commit changes.
+2. Buka halaman ujian.
+3. Tekan Ctrl + F5.
+4. Tes:
+   - admin di laptop,
+   - peserta di HP/browser lain.
+
+YANG DIPERBAIKI:
+- Refresh admin tetap di dashboard admin.
+- Refresh peserta saat ujian tetap kembali ke halaman ujian.
+- Jawaban tetap tersimpan.
+- Timer tetap lanjut.
+- HP lebih ringan dan bisa scroll.
+- body.exam-active tidak lagi mengunci scroll.
+- Kamera diperkecil otomatis di HP.
+- Kamera dipindah ke kanan atas di HP agar tidak menutup pilihan jawaban.
+- Admin mendapat snapshot berkala, bukan live video.
+- Admin tetap melihat status online, on-camera, sedang ujian, progress, sisa waktu, selesai, dan keluar tab.
+
+EDIT CONFIG.JS:
+Agar snapshot aktif, pastikan di config.js ada bagian ini:
+
+requireCameraBeforeExam: true,
+showCameraMonitor: true,
+enableSnapshots: true,
+snapshotIntervalSeconds: 90,
+snapshotWidth: 144,
+snapshotHeight: 108,
+snapshotQuality: 0.28
+
+Kalau sebelumnya kamu mematikan kamera, kemungkinan sekarang masih begini:
+requireCameraBeforeExam: false,
+showCameraMonitor: false
+
+Ubah menjadi:
+requireCameraBeforeExam: true,
+showCameraMonitor: true
+
+CATATAN:
+Snapshot dikirim berkala ke Firebase sebagai gambar kecil. Ini bukan live video.
+Interval default 90 detik supaya tidak terlalu berat di HP dan Firebase.

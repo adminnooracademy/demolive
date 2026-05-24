@@ -235,3 +235,120 @@ body.exam-active{overflow:hidden}.hidden{display:none!important}
   .camera-dock{left:12px;right:12px;bottom:12px;width:auto;max-width:330px}
   #realtimeCameraVideo{height:125px}
 }
+
+/* ===== SNAPSHOT + MOBILE STABILITY PATCH ===== */
+body.exam-active{
+  overflow:auto!important;
+  position:static!important;
+  touch-action:auto!important;
+}
+#examScreen{
+  min-height:100dvh;
+  overflow:visible!important;
+}
+.exam-layout{
+  height:auto!important;
+  min-height:calc(100dvh - 76px);
+  overflow:visible!important;
+}
+.question-panel,
+.question-body{
+  overflow:visible!important;
+  min-height:auto!important;
+}
+.side-panel{
+  max-height:none!important;
+}
+.exam-actions{
+  position:sticky;
+  bottom:0;
+  z-index:20;
+  box-shadow:0 -10px 30px rgba(73,18,21,.08);
+}
+.snapshot-thumb{
+  width:112px;
+  height:84px;
+  object-fit:cover;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:#f8f4ec;
+  display:block;
+}
+.camera-dock{
+  width:220px;
+  right:16px;
+  bottom:16px;
+  transition:transform .18s ease, opacity .18s ease;
+}
+#realtimeCameraVideo{
+  height:135px;
+}
+.camera-dock.minimized{
+  width:190px;
+}
+.camera-dock.minimized .camera-dock-head{
+  padding:9px 11px;
+}
+@media(max-width:920px){
+  .exam-layout{
+    display:flex!important;
+    flex-direction:column!important;
+    padding:10px!important;
+    gap:10px!important;
+  }
+  .side-panel{
+    order:1;
+    padding:12px!important;
+    border-radius:20px!important;
+  }
+  .question-panel{
+    order:2;
+    border-radius:20px!important;
+  }
+  .exam-head{
+    padding:12px 14px!important;
+    align-items:flex-start!important;
+  }
+  .exam-title h2{font-size:18px!important;}
+  .question-body{padding:12px!important;}
+  .question-card{padding:15px!important;border-radius:20px!important;}
+  .question-text{font-size:18px!important;line-height:1.55!important;}
+  .context{max-height:40dvh;overflow:auto;-webkit-overflow-scrolling:touch;}
+  .q-grid{
+    max-height:132px;
+    overflow:auto;
+    grid-template-columns:repeat(10,1fr)!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  .q-dot{height:36px!important;border-radius:12px!important;}
+  .timer-card{padding:12px!important;margin-bottom:10px!important;}
+  .timer{font-size:27px!important;}
+  .exam-actions{
+    padding:10px 12px!important;
+    border-radius:0 0 20px 20px!important;
+  }
+  .left-actions,.right-actions{width:100%;}
+  .exam-actions .btn{flex:1 1 auto;min-width:120px;}
+}
+@media(max-width:560px){
+  .app-shell{padding:0!important;}
+  .topbar-inner{padding:10px 12px!important;}
+  .exam-layout{padding:8px!important;}
+  .camera-dock{
+    top:76px!important;
+    right:10px!important;
+    bottom:auto!important;
+    left:auto!important;
+    width:155px!important;
+    max-width:155px!important;
+    border-radius:18px!important;
+  }
+  .camera-dock .camera-dock-head b{font-size:11px!important;}
+  .camera-dock .camera-dock-head{padding:8px!important;}
+  .camera-dock .camera-note{font-size:10px!important;padding:7px 8px!important;}
+  #realtimeCameraVideo{height:92px!important;}
+  .camera-dock.minimized{width:146px!important;}
+  .option{padding:13px!important;border-radius:16px!important;}
+  .option-label{width:29px!important;height:29px!important;}
+  .snapshot-thumb{width:86px;height:64px;}
+}

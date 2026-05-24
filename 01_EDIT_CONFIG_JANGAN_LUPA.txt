@@ -1,0 +1,31 @@
+TAMBAHKAN / SESUAIKAN BAGIAN INI DI config.js
+
+Di bagian bawah config.js, pastikan ada:
+
+  heartbeatSeconds: 5,
+  activeTimeoutSeconds: 20,
+  requireCameraBeforeExam: true,
+  showCameraMonitor: true,
+  enableSnapshots: true,
+  snapshotIntervalSeconds: 90,
+  snapshotWidth: 144,
+  snapshotHeight: 108,
+  snapshotQuality: 0.28
+
+Contoh lengkap bagian akhir:
+
+  useAnonymousAuth: true,
+
+  // Pengaturan monitoring
+  heartbeatSeconds: 5,
+  activeTimeoutSeconds: 20,
+  requireCameraBeforeExam: true,
+  showCameraMonitor: true,
+  enableSnapshots: true,
+  snapshotIntervalSeconds: 90,
+  snapshotWidth: 144,
+  snapshotHeight: 108,
+  snapshotQuality: 0.28
+};
+
+Jangan hapus firebaseConfig yang sudah berhasil.

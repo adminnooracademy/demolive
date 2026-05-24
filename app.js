@@ -15,6 +15,81 @@ let lostFocus=0;
 let examSubmitted=false;
 
 
+const PMB_SESSION_KEY = 'pmbSessionUserV2';
+function saveSessionUser(){
+  if(currentUser) localStorage.setItem(PMB_SESSION_KEY, currentUser.username);
+}
+function clearSessionUser(){
+  localStorage.removeItem(PMB_SESSION_KEY);
+}
+function activeExamStorageKey(username){
+  return `pmbActiveExamState:${username || currentUser?.username || ''}`;
+}
+function saveActiveExamState(){
+  if(!currentUser || !currentExam || examSubmitted) return;
+  localStorage.setItem(activeExamStorageKey(), JSON.stringify({
+    username: currentUser.username,
+    examKey: currentExamKey,
+    currentQuestionIndex,
+    answers,
+    flagged,
+    remainingSeconds,
+    startedAt: startedAt?.toISOString(),
+    lostFocus,
+    updatedAt: todayISO()
+  }));
+}
+function clearActiveExamState(){
+  if(currentUser) localStorage.removeItem(activeExamStorageKey());
+}
+function setLoggedInUI(user){
+  $('loginScreen').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  $('userName').textContent=user.name || user.username;
+  $('userRole').textContent=user.role;
+  $('userInitial').textContent=(user.name||user.username).slice(0,1).toUpperCase();
+}
+function restoreActiveExamIfAny(){
+  if(!currentUser || currentUser.role==='admin') return false;
+  const raw = localStorage.getItem(activeExamStorageKey());
+  if(!raw) return false;
+  try{
+    const obj = JSON.parse(raw);
+    if(!obj || obj.username !== currentUser.username || !obj.examKey || !EXAMS[obj.examKey]) return false;
+    if(hasSubmittedExam(obj.examKey)){ localStorage.removeItem(activeExamStorageKey()); return false; }
+    currentExamKey = obj.examKey;
+    currentExam = EXAMS[obj.examKey];
+    currentQuestionIndex = Math.max(0, Math.min(Number(obj.currentQuestionIndex || 0), currentExam.questions.length - 1));
+    answers = Array.isArray(obj.answers) && obj.answers.length === currentExam.questions.length ? obj.answers : Array(currentExam.questions.length).fill(null);
+    flagged = Array.isArray(obj.flagged) && obj.flagged.length === currentExam.questions.length ? obj.flagged : Array(currentExam.questions.length).fill(false);
+    remainingSeconds = Number(obj.remainingSeconds || currentExam.durationMinutes * 60);
+    startedAt = new Date(obj.startedAt || Date.now());
+    lostFocus = Number(obj.lostFocus || 0);
+    examSubmitted = false;
+    if(remainingSeconds <= 0) remainingSeconds = 1;
+    $('app').classList.add('hidden');
+    $('examScreen').classList.remove('hidden');
+    document.body.classList.add('exam-active');
+    renderExam();
+    startTimer();
+    return true;
+  }catch(e){
+    console.warn('Gagal restore ujian aktif', e);
+    localStorage.removeItem(activeExamStorageKey());
+    return false;
+  }
+}
+function restoreSessionOnLoad(){
+  const username = localStorage.getItem(PMB_SESSION_KEY);
+  if(!username) return;
+  const found = USERS.find(x => x.username === username);
+  if(!found) return;
+  currentUser = found;
+  setLoggedInUI(found);
+  if(!restoreActiveExamIfAny()) renderDashboard();
+}
+
+
 const EXAM_PACKAGES = {
   arabic_math: {
     title: 'Pilihan 1',
@@ -133,13 +208,16 @@ $('loginForm').addEventListener('submit', e=>{
   const found=USERS.find(x=>x.username===u && x.password===p);
   if(!found){$('loginError').textContent='Username atau password salah.'; return;}
   currentUser=found;
-  $('loginScreen').classList.add('hidden'); $('app').classList.remove('hidden');
-  $('userName').textContent=found.name || found.username;
-  $('userRole').textContent=found.role;
-  $('userInitial').textContent=(found.name||found.username).slice(0,1).toUpperCase();
-  renderDashboard();
+  saveSessionUser();
+  setLoggedInUI(found);
+  if(!restoreActiveExamIfAny()) renderDashboard();
 });
-$('logoutBtn').addEventListener('click', ()=>{location.reload()});
+$('logoutBtn').addEventListener('click', ()=>{
+  clearInterval(timerInterval);
+  clearActiveExamState();
+  clearSessionUser();
+  location.reload();
+});
 
 function renderDashboard(){
   $('topSubtitle').textContent = currentUser.role==='admin' ? 'Dashboard Panitia' : 'Paket Ujian';
@@ -255,12 +333,13 @@ async function startExam(key){
       cancelText:'Mulai Baru'
     });
     if(useDraft){
-      try{const obj=JSON.parse(draft);answers=obj.answers||answers;flagged=obj.flagged||flagged;remainingSeconds=obj.remainingSeconds||remainingSeconds;startedAt=new Date(obj.startedAt||Date.now())}catch(e){}
+      try{const obj=JSON.parse(draft);answers=obj.answers||answers;flagged=obj.flagged||flagged;remainingSeconds=obj.remainingSeconds||remainingSeconds;startedAt=new Date(obj.startedAt||Date.now());currentQuestionIndex=Number(obj.currentQuestionIndex||0);lostFocus=Number(obj.lostFocus||0)}catch(e){}
     }else{
       localStorage.removeItem(examStorageKey());
     }
   }
   $('app').classList.add('hidden'); document.body.classList.add('exam-active');
+  saveActiveExamState();
   renderExam();
   startTimer();
 }
@@ -308,10 +387,10 @@ function renderQGrid(){
   grid.innerHTML=currentExam.questions.map((q,i)=>`<button class="q-dot ${i===currentQuestionIndex?'current':''} ${answers[i]!==null?'answered':''} ${flagged[i]?'flagged':''}" data-go="${i}">${i+1}</button>`).join('');
   grid.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>goQuestion(Number(b.dataset.go)));
 }
-function goQuestion(i){if(i<0||i>=currentExam.questions.length)return; currentQuestionIndex=i; renderQuestion(); renderQGrid(); updateProgress();}
+function goQuestion(i){if(i<0||i>=currentExam.questions.length)return; currentQuestionIndex=i; saveActiveExamState(); renderQuestion(); renderQGrid(); updateProgress();}
 function updateProgress(){const answered=answers.filter(x=>x!==null).length; const total=currentExam.questions.length; $('progressBar').style.width=pct(answered,total)+'%'; $('progressText').textContent=`${answered} dari ${total} soal terjawab`;}
-function persistDraft(){localStorage.setItem(examStorageKey(),JSON.stringify({answers,flagged,remainingSeconds,startedAt:startedAt?.toISOString(),updatedAt:todayISO()}));}
-function startTimer(){clearInterval(timerInterval); timerInterval=setInterval(()=>{remainingSeconds--; $('timer').textContent=fmtTime(remainingSeconds); if(remainingSeconds%10===0)persistDraft(); if(remainingSeconds<=0){clearInterval(timerInterval); confirmSubmit(true)}},1000)}
+function persistDraft(){localStorage.setItem(examStorageKey(),JSON.stringify({answers,flagged,currentQuestionIndex,remainingSeconds,startedAt:startedAt?.toISOString(),lostFocus,updatedAt:todayISO()})); saveActiveExamState();}
+function startTimer(){clearInterval(timerInterval); timerInterval=setInterval(()=>{remainingSeconds--; $('timer').textContent=fmtTime(remainingSeconds); if(remainingSeconds%5===0)persistDraft(); if(remainingSeconds<=0){clearInterval(timerInterval); confirmSubmit(true)}},1000)}
 async function confirmSubmit(auto){
   if(examSubmitted) return;
   const unanswered=answers.filter(x=>x===null).length;
@@ -330,7 +409,7 @@ async function confirmSubmit(auto){
   submitExam(false);
 }
 async function submitExam(auto){
-  examSubmitted=true; clearInterval(timerInterval); localStorage.removeItem(examStorageKey());
+  examSubmitted=true; clearInterval(timerInterval); localStorage.removeItem(examStorageKey()); clearActiveExamState();
   const total=currentExam.questions.length; let correct=0; const details=currentExam.questions.map((q,i)=>{const ok=answers[i]===q.answer; if(ok)correct++; return {no:i+1, selected:answers[i]!==null?labelFor(answers[i],currentExam.language):'', correct:labelFor(q.answer,currentExam.language), isCorrect:ok};});
   const score=pct(correct,total); const result={id:'R'+Date.now(), username:currentUser.username, name:currentUser.name||currentUser.username, examKey:currentExamKey, examPackage:getUserPackage(), examTitle:currentExam.title, total, correct, wrong:total-correct, score, startedAt:startedAt.toISOString(), submittedAt:todayISO(), durationSeconds:Math.max(0,currentExam.durationMinutes*60-remainingSeconds), autoSubmitted:!!auto, lostFocus, details};
   const results=getResults(); results.push(result); saveResults(results);
@@ -421,3 +500,6 @@ function exportAnswerKey(){
   });
   downloadText('kunci-jawaban-pmb.csv',rows.map(row=>row.map(csvEscape).join(',')).join('\n'),'text/csv');
 }
+
+
+restoreSessionOnLoad();
