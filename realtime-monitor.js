@@ -122,6 +122,115 @@
   function startHeartbeat(){stopHeartbeat(); heartbeatTimer=setInterval(()=>pushStatus(), Math.max(3,HEARTBEAT_SECONDS)*1000);}
   function stopHeartbeat(){if(heartbeatTimer) clearInterval(heartbeatTimer); heartbeatTimer=null;}
 
+
+  const CAMERA_DOCK_STORAGE_KEY = "pmb.cameraDockPosition";
+  let cameraDragState = null;
+
+  function readDockPosition(){
+    try{
+      const raw = localStorage.getItem(CAMERA_DOCK_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
+  }
+
+  function saveDockPosition(pos){
+    try{ localStorage.setItem(CAMERA_DOCK_STORAGE_KEY, JSON.stringify(pos)); }catch(e){}
+  }
+
+  function clampDockPosition(x, y, dock){
+    const padding = 8;
+    const width = dock.offsetWidth || 220;
+    const height = dock.offsetHeight || 150;
+    const maxX = Math.max(padding, window.innerWidth - width - padding);
+    const maxY = Math.max(padding, window.innerHeight - height - padding);
+    return {
+      x: Math.min(Math.max(padding, x), maxX),
+      y: Math.min(Math.max(padding, y), maxY)
+    };
+  }
+
+  function applyDockPosition(pos){
+    const dock = document.getElementById("realtimeCameraDock");
+    if(!dock || !pos || typeof pos.x !== "number" || typeof pos.y !== "number") return;
+    const clamped = clampDockPosition(pos.x, pos.y, dock);
+    dock.style.left = clamped.x + "px";
+    dock.style.top = clamped.y + "px";
+    dock.style.right = "auto";
+    dock.style.bottom = "auto";
+  }
+
+  function resetDockPosition(){
+    const dock = document.getElementById("realtimeCameraDock");
+    if(!dock) return;
+    dock.style.left = "";
+    dock.style.top = "";
+    dock.style.right = "";
+    dock.style.bottom = "";
+    try{ localStorage.removeItem(CAMERA_DOCK_STORAGE_KEY); }catch(e){}
+  }
+
+  function makeDockDraggable(){
+    const dock = document.getElementById("realtimeCameraDock");
+    const head = document.getElementById("realtimeCameraHead");
+    if(!dock || !head || head.dataset.dragReady === "1") return;
+    head.dataset.dragReady = "1";
+
+    const startDrag = (clientX, clientY) => {
+      const rect = dock.getBoundingClientRect();
+      cameraDragState = {
+        offsetX: clientX - rect.left,
+        offsetY: clientY - rect.top
+      };
+      dock.classList.add("dragging");
+    };
+
+    const moveDrag = (clientX, clientY) => {
+      if(!cameraDragState) return;
+      const x = clientX - cameraDragState.offsetX;
+      const y = clientY - cameraDragState.offsetY;
+      const clamped = clampDockPosition(x, y, dock);
+      dock.style.left = clamped.x + "px";
+      dock.style.top = clamped.y + "px";
+      dock.style.right = "auto";
+      dock.style.bottom = "auto";
+    };
+
+    const stopDrag = () => {
+      if(!cameraDragState) return;
+      cameraDragState = null;
+      dock.classList.remove("dragging");
+      const rect = dock.getBoundingClientRect();
+      saveDockPosition({x: rect.left, y: rect.top});
+    };
+
+    head.addEventListener("pointerdown", (e) => {
+      if(e.target.closest("button")) return;
+      startDrag(e.clientX, e.clientY);
+      try{ head.setPointerCapture(e.pointerId); }catch(err){}
+      e.preventDefault();
+    });
+
+    head.addEventListener("pointermove", (e) => {
+      if(!cameraDragState) return;
+      moveDrag(e.clientX, e.clientY);
+      e.preventDefault();
+    });
+
+    head.addEventListener("pointerup", stopDrag);
+    head.addEventListener("pointercancel", stopDrag);
+
+    head.addEventListener("dblclick", () => {
+      resetDockPosition();
+    });
+
+    window.addEventListener("resize", () => {
+      const saved = readDockPosition();
+      if(saved){
+        setTimeout(() => applyDockPosition(saved), 60);
+      }
+    });
+  }
+
   function ensureCameraDock(){
     let dock=document.getElementById("realtimeCameraDock");
     if(dock) return dock;
@@ -129,16 +238,20 @@
     dock.id="realtimeCameraDock";
     dock.className="camera-dock hidden";
     dock.innerHTML=`
-      <div class="camera-dock-head">
+      <div class="camera-dock-head" id="realtimeCameraHead">
         <span class="camera-dot"></span>
         <b>Kamera Aktif</b>
+        <span class="camera-drag-hint">Geser</span>
         <button id="realtimeCameraMin" type="button">−</button>
       </div>
       <video id="realtimeCameraVideo" autoplay playsinline muted></video>
-      <p class="camera-note" id="realtimeCameraNote">Snapshot dikirim berkala ke admin. Bukan live video.</p>
+      <p class="camera-note" id="realtimeCameraNote">Snapshot dikirim berkala ke admin. Bukan live video. Kotak kamera bisa digeser.</p>
     `;
     document.body.appendChild(dock);
     document.getElementById("realtimeCameraMin").addEventListener("click",()=>toggleCameraMinimized());
+    makeDockDraggable();
+    const savedPos = readDockPosition();
+    if(savedPos) setTimeout(()=>applyDockPosition(savedPos), 50);
     return dock;
   }
 
@@ -157,6 +270,8 @@
     dock.classList.remove("hidden");
     const isPhone = window.matchMedia("(max-width: 760px)").matches;
     toggleCameraMinimized(isPhone);
+    const savedPos = readDockPosition();
+    if(savedPos) setTimeout(()=>applyDockPosition(savedPos), 30);
   }
   function hideCameraDock(){const dock=document.getElementById("realtimeCameraDock"); if(dock) dock.classList.add("hidden");}
 
@@ -366,6 +481,25 @@
     window.addEventListener("online",()=>pushStatus({network:"online",event:"online"}));
     window.addEventListener("offline",()=>pushStatus({network:"offline",event:"offline"}));
     window.addEventListener("beforeunload",()=>{const user=getUser(); if(firebaseReady&&db&&user){db.ref(pathParticipant(user.username)).update({online:false,cameraOn:false,activeExam:false,status:"offline",lastSeenMs:Date.now(),lastSeenISO:nowISO()});}});
+  }
+
+
+  function ensureRealtimePanelAfterRefresh(){
+    const user = getUser();
+    if(!user || user.role !== "admin") return;
+
+    const dashboard = document.getElementById("dashboard");
+    if(!dashboard) return;
+
+    // If old dashboard is visible but realtime panel is missing, inject it.
+    if(!document.getElementById("realtimeAdminPanel")){
+      injectRealtimeAdmin();
+    }
+
+    // Reconnect Firebase listeners after browser refresh/session restore.
+    if(firebaseReady && db){
+      startAdminListeners();
+    }
   }
 
   async function boot(){

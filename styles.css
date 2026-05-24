@@ -352,3 +352,44 @@ body.exam-active{
   .option-label{width:29px!important;height:29px!important;}
   .snapshot-thumb{width:86px;height:64px;}
 }
+
+
+
+/* ===== DRAGGABLE FLOATING CAMERA PATCH ===== */
+.camera-dock{
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.camera-dock.dragging{
+  opacity:.96;
+  transform:scale(1.02);
+}
+.camera-dock-head{
+  cursor:grab;
+  touch-action:none;
+}
+.camera-dock.dragging .camera-dock-head,
+.camera-dock-head:active{
+  cursor:grabbing;
+}
+.camera-drag-hint{
+  margin-left:auto;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.04em;
+  opacity:.78;
+  padding:4px 8px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+}
+.camera-dock-head button{
+  margin-left:8px !important;
+  touch-action:manipulation;
+}
+@media(max-width:560px){
+  .camera-drag-hint{
+    font-size:9px;
+    padding:3px 7px;
+  }
+}

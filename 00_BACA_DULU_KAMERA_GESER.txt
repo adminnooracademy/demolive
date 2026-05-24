@@ -1,0 +1,31 @@
+PATCH KAMERA MELAYANG BISA DIGESER
+
+Masalah:
+Kotak kamera masih menutupi sebagian soal/jawaban.
+
+Perbaikan:
+- Kamera tetap melayang.
+- Kamera sekarang bisa digeser-geser dengan jari/mouse.
+- Posisi kamera akan diingat setelah dipindahkan.
+- Double click pada header kamera untuk mengembalikan posisi default.
+- Di HP tetap kecil dan tetap bisa diminimize.
+
+Upload file ini ke GitHub:
+1. realtime-monitor.js
+2. styles.css
+3. index.html
+
+Catatan:
+- Jangan ganti config.js.
+- index.html diikutkan supaya browser memuat file terbaru (cache-busting).
+
+Cara pakai:
+1. Upload 3 file di atas.
+2. Commit changes.
+3. Buka halaman peserta.
+4. Tekan Ctrl + F5.
+5. Saat kamera muncul, tekan dan geser bagian atas kotak kamera yang bertuliskan 'Kamera Aktif'.
+
+Tips:
+- Geser kamera ke kiri atas, kanan atas, atau area kosong yang tidak menutupi soal.
+- Double click header kamera jika ingin kembali ke posisi default.
