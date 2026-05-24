@@ -10,6 +10,7 @@ window.PMB_CONFIG = {
   firebaseConfig: {
   apiKey: "AIzaSyDOBfe4INgVtimBkwVgfQSHT8nkOS-RL0M",
   authDomain: "demolive-45286.firebaseapp.com",
+  databaseURL: "https://demolive-45286-default-rtdb.asia-southeast1.firebasedatabase.app/",
   projectId: "demolive-45286",
   storageBucket: "demolive-45286.firebasestorage.app",
   messagingSenderId: "809618354310",
