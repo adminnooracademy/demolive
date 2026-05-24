@@ -396,3 +396,6 @@ body.exam-active{
 
 /* Admin realtime refresh stability */
 #realtimeRefresh:disabled{opacity:.7;cursor:wait;}
+
+/* Result realtime table patch */
+.realtime-panel .realtime-head + .realtime-table-wrap{margin-top:10px;}

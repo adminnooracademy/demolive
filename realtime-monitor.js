@@ -338,6 +338,97 @@
     cameraStream=null; cameraReady=false; cameraInitializedForExam=false; hideCameraDock();
   }
 
+
+  function readLocalResultsSafe(){
+    try{
+      if(typeof getResults === "function"){
+        const r = getResults();
+        if(Array.isArray(r)) return r;
+      }
+    }catch(e){}
+    try{
+      const candidates = [
+        "pmb_results_v5",
+        "pmbResults",
+        "results",
+        "pmb-stipi-results",
+        "PMB_RESULTS",
+        "examResults"
+      ];
+      for(const key of candidates){
+        const raw = localStorage.getItem(key);
+        if(!raw) continue;
+        const parsed = JSON.parse(raw);
+        if(Array.isArray(parsed)) return parsed;
+      }
+    }catch(e){}
+    return [];
+  }
+
+  function latestLocalResult(beforeLength){
+    const arr = readLocalResultsSafe();
+    if(!arr.length) return null;
+    if(typeof beforeLength === "number" && arr.length > beforeLength){
+      return arr[arr.length - 1];
+    }
+    return arr[arr.length - 1];
+  }
+
+  function normalizeRealtimeResult(rawResult, auto){
+    const user = getUser() || {};
+    const exam = getCurrentExam();
+    const examKey = (rawResult && (rawResult.examKey || rawResult.subject || rawResult.exam || rawResult.key)) || getCurrentExamKey() || "";
+    const examTitle = (rawResult && (rawResult.examTitle || rawResult.subjectTitle || rawResult.title)) || (exam && exam.title) || examKey || "-";
+    const id = (rawResult && rawResult.id) || `result-${user.username || "peserta"}-${examKey || "exam"}-${Date.now()}`;
+
+    const total = Number((rawResult && (rawResult.total || rawResult.totalQuestions || rawResult.questionCount)) || (exam && exam.questions ? exam.questions.length : 0) || 0);
+    const correct = Number((rawResult && (rawResult.correct || rawResult.correctCount || rawResult.right)) || 0);
+    const wrong = Number((rawResult && (rawResult.wrong || rawResult.wrongCount)) || Math.max(0, total - correct));
+    const score = Number((rawResult && (rawResult.score || rawResult.percentage || rawResult.nilai)) || (total ? Math.round((correct/total)*100) : 0));
+
+    return Object.assign({}, rawResult || {}, {
+      id,
+      username: (rawResult && rawResult.username) || user.username || "",
+      name: (rawResult && rawResult.name) || user.name || user.username || "",
+      examPackage: (rawResult && rawResult.examPackage) || getPackage() || "",
+      examKey,
+      examTitle,
+      score,
+      correct,
+      wrong,
+      total,
+      startedAt: (rawResult && rawResult.startedAt) || "",
+      submittedAt: (rawResult && rawResult.submittedAt) || nowISO(),
+      durationSeconds: (rawResult && rawResult.durationSeconds) || 0,
+      autoSubmitted: Boolean((rawResult && rawResult.autoSubmitted) || auto),
+      lostFocus: (rawResult && rawResult.lostFocus) || getLostFocus(),
+      snapshotCount,
+      latestSnapshotAt,
+      savedAtMs: Date.now(),
+      savedAtISO: nowISO()
+    });
+  }
+
+  async function saveRealtimeResult(rawResult, auto){
+    if(!firebaseReady || !db) return false;
+    const result = normalizeRealtimeResult(rawResult, auto);
+    try{
+      await db.ref(`${pathResults()}/${sanitizeKey(result.id)}`).set(result);
+      realtimeResults = Object.assign({}, realtimeResults || {}, {[sanitizeKey(result.id)]: result});
+      await pushStatus({
+        event:"result_saved",
+        activeExam:false,
+        lastResultId:result.id,
+        lastScore:result.score,
+        lastExamTitle:result.examTitle
+      });
+      return true;
+    }catch(err){
+      console.warn("Gagal simpan hasil realtime:", err);
+      return false;
+    }
+  }
+
   function installFunctionHooks(){
     if(typeof startExam === "function" && !startExam.__snapshotHooked){
       const originalStartExam = startExam;
@@ -356,22 +447,26 @@
     if(typeof submitExam === "function" && !submitExam.__snapshotHooked){
       const originalSubmitExam = submitExam;
       submitExam = async function(auto){
-        await captureAndSendSnapshot(auto ? "auto_submit" : "submit");
+        const beforeLen = readLocalResultsSafe().length;
         const result = await originalSubmitExam.apply(this, arguments);
-        try{
-          const all = typeof getResults === "function" ? getResults() : [];
-          const last = all[all.length-1];
-          if(last && firebaseReady && db){
-            await db.ref(`${pathResults()}/${sanitizeKey(last.id)}`).set(Object.assign({}, last, {
-              snapshotCount, latestSnapshot, latestSnapshotAt, savedAtMs:Date.now(), savedAtISO:nowISO()
-            }));
+
+        // app.js usually saves result to localStorage inside originalSubmitExam.
+        // We read it back after submit, then push the same result to Firebase.
+        setTimeout(async () => {
+          try{
+            const last = latestLocalResult(beforeLen);
+            await saveRealtimeResult(last, auto);
+            injectRealtimeAdmin();
+          }catch(err){
+            console.warn("Gagal proses hasil realtime setelah submit:", err);
           }
-          await pushStatus({event:"exam_submitted", activeExam:false, cameraOn:cameraReady});
-        }catch(err){ console.warn("Gagal simpan hasil realtime:", err); }
+        }, 250);
+
         return result;
       };
       submitExam.__snapshotHooked = true;
     }
+
 
     if(typeof renderAdmin === "function" && !renderAdmin.__snapshotHooked){
       const originalRenderAdmin = renderAdmin;
@@ -439,6 +534,39 @@
           <tbody>${renderParticipantRows()}</tbody>
         </table>
       </div>`;
+  }
+
+
+  function realtimeResultArray(){
+    const firebaseResults = Object.values(realtimeResults || {});
+    const localResults = readLocalResultsSafe().map(r => normalizeRealtimeResult(r, false));
+    const map = {};
+    firebaseResults.concat(localResults).forEach(r => {
+      if(!r) return;
+      const id = r.id || `${r.username || ""}-${r.examKey || r.examTitle || ""}-${r.submittedAt || ""}`;
+      map[id] = r;
+    });
+    return Object.values(map).sort((a,b) => String(b.submittedAt || "").localeCompare(String(a.submittedAt || "")));
+  }
+
+  function renderRealtimeResultRows(){
+    const arr = realtimeResultArray();
+    if(!arr.length){
+      return `<tr><td colspan="9">Belum ada hasil submit realtime. Jika peserta sudah submit, klik Refresh Monitor.</td></tr>`;
+    }
+    return arr.map(r => `
+      <tr>
+        <td><b>${esc(r.name || "-")}</b><span class="monitor-small">${esc(r.username || "-")}</span></td>
+        <td>${esc(r.examPackage || "-")}</td>
+        <td>${esc(r.examTitle || r.examKey || "-")}<span class="monitor-small">${esc(r.examKey || "")}</span></td>
+        <td><b>${esc(r.score ?? "-")}</b></td>
+        <td>${esc(r.correct ?? "-")}/${esc(r.total ?? "-")}</td>
+        <td>${esc(r.wrong ?? "-")}</td>
+        <td>${esc(r.lostFocus || 0)}</td>
+        <td>${esc(r.snapshotCount || 0)}<span class="monitor-small">${esc(r.latestSnapshotAt || "")}</span></td>
+        <td>${esc(r.submittedAt || "-")}</td>
+      </tr>
+    `).join("");
   }
 
   function participantArray(){return Object.values(participants || {}).filter(p=>p && p.role!=="admin").sort((a,b)=>String(a.username).localeCompare(String(b.username)));}
@@ -538,7 +666,8 @@
     downloadCSV("status-realtime-pmb-snapshot.csv", rows);
   }
   function exportResultsCSV(){
-    const arr=Object.values(realtimeResults||{}); const rows=[["id","username","name","examPackage","examKey","examTitle","score","correct","wrong","total","startedAt","submittedAt","durationSeconds","autoSubmitted","lostFocus","snapshotCount"]];
+    const arr = realtimeResultArray();
+    const rows=[["id","username","name","examPackage","examKey","examTitle","score","correct","wrong","total","startedAt","submittedAt","durationSeconds","autoSubmitted","lostFocus","snapshotCount"]];
     arr.forEach(r=>rows.push([r.id,r.username,r.name,r.examPackage,r.examKey,r.examTitle,r.score,r.correct,r.wrong,r.total,r.startedAt,r.submittedAt,r.durationSeconds,r.autoSubmitted,r.lostFocus,r.snapshotCount]));
     downloadCSV("hasil-realtime-pmb-snapshot.csv", rows);
   }
@@ -598,7 +727,7 @@
   }
 
   boot();
-  window.PMB_REALTIME_DEBUG = () => ({firebaseReady, hasFirebaseConfig: hasFirebaseConfig(), participantCount: Object.keys(participants||{}).length, resultCount: Object.keys(realtimeResults||{}).length, currentUser: getUser && getUser()});
+  window.PMB_REALTIME_DEBUG = () => ({firebaseReady, hasFirebaseConfig: hasFirebaseConfig(), participantCount: Object.keys(participants||{}).length, resultCount: Object.keys(realtimeResults||{}).length, localResultCount: readLocalResultsSafe().length, currentUser: getUser && getUser()});
 
   window.PMB_REALTIME_MONITOR = {pushStatus, ensureCamera, captureAndSendSnapshot, exportStatusCSV, exportResultsCSV};
 })();
