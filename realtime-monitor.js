@@ -387,10 +387,27 @@
   }
 
   function injectRealtimeAdmin(){
-    const d=document.getElementById("dashboard"); if(!d) return;
-    const old=document.getElementById("realtimeAdminPanel"); if(old) old.remove();
-    const panel=document.createElement("section"); panel.id="realtimeAdminPanel"; panel.className="realtime-panel"; panel.innerHTML=realtimeAdminHTML();
-    const first=d.children[1] || d.firstChild; if(first) d.insertBefore(panel, first); else d.appendChild(panel);
+    const d = document.getElementById("dashboard");
+    const user = getUser();
+    if(!d || !user || user.role !== "admin") return;
+
+    let panel = document.getElementById("realtimeAdminPanel");
+    if(!panel){
+      panel = document.createElement("section");
+      panel.id = "realtimeAdminPanel";
+      panel.className = "realtime-panel";
+      // Put realtime panel near top, after the first hero/card if possible.
+      const firstCard = d.firstElementChild;
+      if(firstCard && firstCard.nextSibling){
+        d.insertBefore(panel, firstCard.nextSibling);
+      }else if(firstCard){
+        firstCard.insertAdjacentElement("afterend", panel);
+      }else{
+        d.appendChild(panel);
+      }
+    }
+
+    panel.innerHTML = realtimeAdminHTML();
     bindRealtimeAdminButtons();
   }
 
@@ -453,14 +470,66 @@
   }
 
   function bindRealtimeAdminButtons(){
-    const refresh=document.getElementById("realtimeRefresh"); if(refresh) refresh.onclick=injectRealtimeAdmin;
-    const ex1=document.getElementById("realtimeExportStatus"); if(ex1) ex1.onclick=exportStatusCSV;
-    const ex2=document.getElementById("realtimeExportResults"); if(ex2) ex2.onclick=exportResultsCSV;
+    const refresh = document.getElementById("realtimeRefresh");
+    if(refresh){
+      refresh.onclick = async () => {
+        refresh.disabled = true;
+        const oldText = refresh.textContent;
+        refresh.textContent = "Memuat...";
+        try{
+          if(firebaseReady && db){
+            const pSnap = await db.ref(pathParticipants()).once("value");
+            participants = pSnap.val() || {};
+            const rSnap = await db.ref(pathResults()).once("value");
+            realtimeResults = rSnap.val() || {};
+          }
+          injectRealtimeAdmin();
+        }catch(err){
+          console.warn("Refresh monitor gagal:", err);
+          injectRealtimeAdmin();
+        }finally{
+          const btn = document.getElementById("realtimeRefresh");
+          if(btn){
+            btn.disabled = false;
+            btn.textContent = oldText || "Refresh Monitor";
+          }
+        }
+      };
+    }
+
+    const exportStatus = document.getElementById("realtimeExportStatus");
+    if(exportStatus) exportStatus.onclick = exportStatusCSV;
+
+    const exportResults = document.getElementById("realtimeExportResults");
+    if(exportResults) exportResults.onclick = exportResultsCSV;
   }
+
   function startAdminListeners(){
-    if(!firebaseReady || !db || adminParticipantListener) return;
-    adminParticipantListener = db.ref(pathParticipants()).on("value", snap=>{participants=snap.val()||{}; injectRealtimeAdmin();});
-    adminResultListener = db.ref(pathResults()).on("value", snap=>{realtimeResults=snap.val()||{}; injectRealtimeAdmin();});
+    if(!firebaseReady || !db) {
+      injectRealtimeAdmin();
+      return;
+    }
+
+    try{
+      if(adminParticipantListener){
+        db.ref(pathParticipants()).off("value", adminParticipantListener);
+      }
+      if(adminResultListener){
+        db.ref(pathResults()).off("value", adminResultListener);
+      }
+    }catch(e){}
+
+    adminParticipantListener = snap => {
+      participants = snap.val() || {};
+      injectRealtimeAdmin();
+    };
+    adminResultListener = snap => {
+      realtimeResults = snap.val() || {};
+      injectRealtimeAdmin();
+    };
+
+    db.ref(pathParticipants()).on("value", adminParticipantListener);
+    db.ref(pathResults()).on("value", adminResultListener);
   }
 
   function exportStatusCSV(){
@@ -483,6 +552,12 @@
     window.addEventListener("beforeunload",()=>{const user=getUser(); if(firebaseReady&&db&&user){db.ref(pathParticipant(user.username)).update({online:false,cameraOn:false,activeExam:false,status:"offline",lastSeenMs:Date.now(),lastSeenISO:nowISO()});}});
   }
 
+  function isAdminDashboardVisible(){
+    const user = getUser();
+    const dashboard = document.getElementById("dashboard");
+    if(!user || user.role !== "admin" || !dashboard) return false;
+    return !dashboard.classList.contains("hidden") && dashboard.offsetParent !== null;
+  }
 
   function ensureRealtimePanelAfterRefresh(){
     const user = getUser();
@@ -491,12 +566,18 @@
     const dashboard = document.getElementById("dashboard");
     if(!dashboard) return;
 
-    // If old dashboard is visible but realtime panel is missing, inject it.
+    // If app.js restored admin dashboard after refresh, realtime panel must be mounted again.
     if(!document.getElementById("realtimeAdminPanel")){
       injectRealtimeAdmin();
+    }else{
+      // Keep numbers fresh without waiting for a button.
+      const panel = document.getElementById("realtimeAdminPanel");
+      if(panel && !panel.dataset.boundRefresh){
+        bindRealtimeAdminButtons();
+        panel.dataset.boundRefresh = "1";
+      }
     }
 
-    // Reconnect Firebase listeners after browser refresh/session restore.
     if(firebaseReady && db){
       startAdminListeners();
     }
@@ -504,6 +585,12 @@
 
   async function boot(){
     installFunctionHooks(); installEventStatus(); await initFirebase(); installFunctionHooks(); startHeartbeat();
+
+    // adminRefreshWatchdogV2: keeps realtime panel alive after admin refresh / dashboard re-render
+    setTimeout(ensureRealtimePanelAfterRefresh, 200);
+    setTimeout(ensureRealtimePanelAfterRefresh, 800);
+    setTimeout(ensureRealtimePanelAfterRefresh, 1600);
+    setInterval(ensureRealtimePanelAfterRefresh, 2500);
     const loginForm=document.getElementById("loginForm");
     if(loginForm) loginForm.addEventListener("submit",()=>setTimeout(()=>{pushStatus({event:"login"}); if(getUser()&&getUser().role==="admin"){injectRealtimeAdmin(); startAdminListeners();}},250));
     setInterval(()=>{if(getUser()) pushStatus();}, Math.max(3,HEARTBEAT_SECONDS)*1000);
@@ -511,5 +598,7 @@
   }
 
   boot();
+  window.PMB_REALTIME_DEBUG = () => ({firebaseReady, hasFirebaseConfig: hasFirebaseConfig(), participantCount: Object.keys(participants||{}).length, resultCount: Object.keys(realtimeResults||{}).length, currentUser: getUser && getUser()});
+
   window.PMB_REALTIME_MONITOR = {pushStatus, ensureCamera, captureAndSendSnapshot, exportStatusCSV, exportResultsCSV};
 })();

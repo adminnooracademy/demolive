@@ -1,0 +1,35 @@
+FIX FINAL - ADMIN REALTIME TIDAK HILANG SETELAH REFRESH
+
+Masalah yang diperbaiki:
+1. Setelah admin refresh, keterangan aktif/online/sedang ujian hilang.
+2. Tombol Refresh Monitor tidak bekerja.
+3. Panel realtime kadang tidak dipasang ulang setelah app.js merender dashboard lokal.
+4. Listener Firebase kadang tidak tersambung ulang setelah refresh.
+
+File yang perlu diupload:
+- realtime-monitor.js
+- index.html
+- styles.css
+
+JANGAN ganti config.js.
+
+Langkah:
+1. Extract ZIP.
+2. Upload 3 file di atas ke GitHub.
+3. Commit changes.
+4. Buka halaman admin.
+5. Tekan Ctrl + F5.
+6. Login admin ulang jika perlu.
+
+Tes:
+- Login admin di laptop.
+- Login peserta di HP/browser lain.
+- Peserta mulai ujian.
+- Refresh halaman admin.
+- Panel Realtime Monitor harus tetap muncul dan data aktif/online tetap muncul lagi.
+- Tombol Refresh Monitor harus berubah sebentar menjadi "Memuat..." lalu data terload ulang.
+
+Kalau masih belum muncul:
+1. Buka Console browser admin.
+2. Ketik: PMB_REALTIME_DEBUG()
+3. Kirim screenshot hasilnya.

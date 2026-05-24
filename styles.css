@@ -393,3 +393,6 @@ body.exam-active{
     padding:3px 7px;
   }
 }
+
+/* Admin realtime refresh stability */
+#realtimeRefresh:disabled{opacity:.7;cursor:wait;}
